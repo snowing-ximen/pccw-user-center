@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<!-- Inherit defaults from Spring Boot -->
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>2.2.10.RELEASE</version>
+	</parent>
+
+    <groupId>net.pccw.uc</groupId>     
+    <artifactId>user-center</artifactId>
+    <version>0.0.1-SNAPSHOT</version> 
+    <name>PCCW User Center</name>
+    <description>PCCW User Center</description>
+    <modelVersion>4.0.0</modelVersion>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>uc-common</module>
+        <module>uc-manager</module>        
+        <module>uc-web</module>
+        <module>nf-eureka-server</module>
+        <module>nf-zuul-server</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <nacos-config-spring-boot.version>2.1.3.RELEASE</nacos-config-spring-boot.version>
+        <feign-okhttp.version>10.12</feign-okhttp.version>
+        <dynamic-datasource.version>2.4.2</dynamic-datasource.version>
+        <okhttp.version>3.14.9</okhttp.version>
+        <mockito.version>2.27.0</mockito.version>
+        <sentinel.version>1.5.1</sentinel.version>
+        <feign-httpclient.version>10.2.3</feign-httpclient.version>
+        <lookout-sofa-boot-starter.version>1.5.3</lookout-sofa-boot-starter.version>
+        <spring-cloud-starter-openfeign.version>2.1.1.RELEASE</spring-cloud-starter-openfeign.version>
+        <jasypt-spring-boot-starter.version>2.0.0</jasypt-spring-boot-starter.version>
+        <mybatis.version>3.4.0</mybatis.version>
+        <mybatis-spring.version>2.0.1</mybatis-spring.version>
+        <mybatis-dynamic-sql.version>1.1.4</mybatis-dynamic-sql.version>
+        <mybatis-spring-boot-starter.version>2.0.1</mybatis-spring-boot-starter.version>
+        <mybatis-generator-core.version>1.4.0</mybatis-generator-core.version>
+        <mysql-connector-java.version>8.0.16</mysql-connector-java.version>
+        <druid.version>1.1.22</druid.version>
+        <spring-cloud.version>Hoxton.SR12</spring-cloud.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>2.6.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>2.6.3</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>uc-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>uc-manager</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-cli</groupId>
+                <artifactId>commons-cli</artifactId>
+                <version>1.2</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.5</version>
+            </dependency>
+
+
+        </dependencies>
+    </dependencyManagement>
+
+
+</project>

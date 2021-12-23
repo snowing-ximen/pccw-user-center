@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.pccw.uc.dao.UserDAO">
+
+    <resultMap id="BaseResultMap" type="net.pccw.uc.common.model.User">
+        <result column="userId" jdbcType="BIGINT" property="userId"/>
+        <result column="username" jdbcType="VARCHAR" property="username"/>
+        <result column="password" jdbcType="VARCHAR" property="password"/>
+        <result column="email" jdbcType="VARCHAR" property="email"/>
+        <result column="mobile" jdbcType="VARCHAR" property="mobile"/>
+        <result column="createdDate" jdbcType="TIMESTAMP" property="createdDate"/>
+        <result column="updatedDate" jdbcType="TIMESTAMP" property="updatedDate"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        userId, username, password, mobile, email, created_date, updated_date
+    </sql>
+
+    <select id="selectByUsername" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM user
+        WHERE username = #{username,jdbcType=VARCHAR}
+    </select>
+
+    <insert id="insert" keyColumn="userId" keyProperty="userId" parameterType="net.pccw.uc.common.model.User"
+            useGeneratedKeys="true">
+        INSERT INTO user (username, password, mobile, email)
+            VALUES (#{username,jdbcType=VARCHAR}, #{password,jdbcType=BIGINT}, #{mobile,jdbcType=VARCHAR},
+              #{email,jdbcType=BIGINT})
+    </insert>
+
+    <update id="updateByUsername" parameterType="net.pccw.uc.common.model.User">
+        UPDATE user
+        SET
+            <if test="password != null">
+                password = #{password,jdbcType=VARCHAR},
+            </if>
+            <if test="mobile != null">
+                mobile = #{mobile,jdbcType=VARCHAR},
+            </if>
+            <if test="email != null">
+                email = #{mobile,jdbcType=VARCHAR}
+            </if>
+        WHERE username = #{username,jdbcType=BIGINT}
+    </update>
+
+    <update id="updatedDeletedStateByUsername" parameterType="java.lang.String" >
+        UPDATE user
+        SET
+            deleted = 1
+        WHERE username = #{username,jdbcType=VARCHAR}
+    </update>
+
+</mapper>
