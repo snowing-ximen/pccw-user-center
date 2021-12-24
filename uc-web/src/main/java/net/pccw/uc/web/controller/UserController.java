@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/users")
 @Validated
 public class UserController {
 
@@ -32,9 +32,9 @@ public class UserController {
         return  responseEntity;
     }
 
-    @PutMapping("")
-    public Response<Boolean> updateUser(@Valid @RequestBody RegistrationRequest request) {
-
+    @PutMapping("{username}")
+    public Response<Boolean> updateUser(@PathVariable("username") String username, @Valid @RequestBody RegistrationRequest request) {
+        request.setUsername(username);
         User user = UserCreator.userCreator(request);
         Integer result = userService.updateByUsername(user);
         Response<Boolean> responseEntity = new Response<>(result > 0 ? Boolean.TRUE :  Boolean.FALSE);
@@ -43,7 +43,7 @@ public class UserController {
     }
 
     @GetMapping("{username}")
-    public Response<UserRegistrationResponse> updateUser(@PathVariable("username") String username) {
+    public Response<UserRegistrationResponse> getUser(@PathVariable("username") String username) {
 
         User user = userService.selectByUsername(username);
         UserRegistrationResponse result = UserCreator.userRegistrationResponseCreator(user);
