@@ -4,6 +4,7 @@ import net.pccw.uc.common.dto.Response;
 import net.pccw.uc.common.dto.request.RegistrationRequest;
 import net.pccw.uc.common.dto.response.UserRegistrationResponse;
 import net.pccw.uc.common.model.User;
+import net.pccw.uc.common.utils.ResponseMessageEnum;
 import net.pccw.uc.web.creator.UserCreator;
 import net.pccw.uc.web.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,8 +47,17 @@ public class UserController {
     public Response<UserRegistrationResponse> getUser(@PathVariable("username") String username) {
 
         User user = userService.selectByUsername(username);
-        UserRegistrationResponse result = UserCreator.userRegistrationResponseCreator(user);
-        Response<UserRegistrationResponse> responseEntity = new Response<>(result);
+
+        UserRegistrationResponse result = null;
+        Response<UserRegistrationResponse> responseEntity = null;
+
+        if(user == null){
+            result = new UserRegistrationResponse();
+            responseEntity = new Response<>(ResponseMessageEnum.USER_NOT_EXIST, result);
+        }else{
+            result = UserCreator.userRegistrationResponseCreator(user);
+            responseEntity = new Response<>(result);
+        }
 
         return  responseEntity;
     }

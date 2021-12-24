@@ -18,7 +18,6 @@ public class UserCreator {
     }
 
     public static UserRegistrationResponse userRegistrationResponseCreator(User user){
-
         UserRegistrationResponse response = new UserRegistrationResponse();
         response.setUserId(user.getUserId());
         response.setUsername(user.getUsername());
