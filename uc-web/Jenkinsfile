@@ -1,0 +1,326 @@
+pipeline {
+    agent any
+
+    environment {
+        PROJECT_MODULE = "."
+        def devops_config = readYaml file: "${PROJECT_MODULE}/devops.yml"
+        APP_ID = "${devops_config.app.app_id}"
+        TEST_SKIP = "${devops_config.ci.test.skip}"
+        COMMAND_BUILD = "${env.M3_HOME}/bin/${devops_config.ci.command.build}"
+        COMMAND_SONAR = "${env.M3_HOME}/bin/mvn clean compile org.sonarsource.scanner.maven:sonar-maven-plugin:3.7.0.1746:sonar -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN}"
+        COMMIT_DATE = sh(returnStdout: true, script: "${GIT_HOME}/git log --pretty=format:%ad --date=format:'%Y%m%d%H%M' ${GIT_COMMIT} -1")
+        COMMIT_SHORT_SHA = sh(returnStdout: true, script: '${GIT_HOME}/git rev-parse --short=8 ${GIT_COMMIT}')
+
+        CHANGE_STRING = getChangeString()
+        DOCKER_IMAGE_NAME = trim("${APP_ID}-${BRANCH_NAME}")
+        DOCKER_TAG = trim("${COMMIT_DATE}.${COMMIT_SHORT_SHA}")
+    }
+
+    stages {
+        // 应用数据同步
+        stage('应用数据同步') {
+            steps {
+                echo "******************************************=应用数据同步"
+                appSync()
+            }
+            post {
+                failure {
+                    sendIntegrationResult("false", "应用数据同步失败")
+                    error("应用数据同步失败")
+                }
+            }
+        }
+
+        // 拉取代码
+        stage('拉取代码') {
+            steps {
+                echo "******************************************=拉取代码"
+                checkout scm
+                updateGitlabCommitStatus name: 'build', state: 'pending'
+                echo "${CHANGE_STRING}"
+            }
+            post {
+                failure {
+                    sendIntegrationResult("false", "拉取代码失败")
+                    error("拉取代码失败")
+                }
+            }
+        }
+
+        // SonarQube 分析
+        stage('Sonar分析') {
+            when { expression { return TEST_SKIP == 'false' } }
+            steps {
+                echo "******************************************=SonarQube analysis"
+                withSonarQubeEnv("sonarqube servers") {
+                    // Optionally use a Maven environment you've configured already
+                    sh "${COMMAND_SONAR}"
+                }
+            }
+            post {
+                failure {
+                    sendIntegrationResult("false", "发送SonarQube分析失败")
+                    error("发送SonarQube分析失败")
+                }
+            }
+        }
+
+        // SonarQube质量阀
+        stage("Sonar质量阀") {
+            when { expression { return TEST_SKIP == 'false' } }
+            steps {
+                echo "******************************************=Sonar质量阀"
+                timeout(time: 1, unit: 'HOURS') {
+                    // Parameter indicates whether to set pipeline to UNSTABLE if Quality Gate fails
+                    // true = set pipeline to UNSTABLE, false = don't
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+            post {
+                failure {
+                    sendIntegrationResult("false", "SonarQube质量阀检测失败")
+                    error("SonarQube质量阀检测失败")
+                }
+            }
+        }
+
+        // 单元测试
+        stage('单元测试') {
+            when { expression { return TEST_SKIP == 'false' } }
+            steps {
+                echo "******************************************=单元测试"
+                junit(allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml')
+
+                jacoco(
+                    buildOverBuild: true,
+                    changeBuildStatus: true,
+                    execPattern: 'target/jacoco.exec',
+                    classPattern: 'target/classes',
+                    sourcePattern: 'src/main/java',
+                    exclusionPattern: 'src/test*',
+                    minimumMethodCoverage: '30',
+                    maximumMethodCoverage: '60',
+                    minimumClassCoverage: '30',
+                    maximumClassCoverage: '60',
+                    minimumLineCoverage: '30',
+                    maximumLineCoverage: '60',
+                    minimumInstructionCoverage: '30',
+                    maximumInstructionCoverage: '60',
+                    minimumComplexityCoverage: '30',
+                    maximumComplexityCoverage: '60',
+                    minimumBranchCoverage: '30',
+                    maximumBranchCoverage: '60'
+                )
+            }
+            post {
+                failure {
+                    sendIntegrationResult("false", "单元测试失败")
+                    error("单元测试失败")
+                }
+            }
+        }
+
+        // 构建
+        stage('构建') {
+            steps {
+                echo "******************************************=构建"
+                sh "${COMMAND_BUILD}"
+            }
+            post {
+                failure {
+                    sendIntegrationResult("false", "构建代码失败")
+                    error("构建代码失败")
+                }
+            }
+        }
+
+        // 打包镜像
+        stage('打包镜像') {
+            steps {
+                echo "******************************************=打包镜像"
+                sh "docker build -f ${PROJECT_MODULE}/Dockerfile -t ${DOCKER_IMAGE_NAME} --build-arg JAR_FILE_PATH=${PROJECT_MODULE}/target ."
+            }
+            post {
+                failure {
+                    sendIntegrationResult("false", "打包镜像失败")
+                    error("打包镜像失败")
+                }
+            }
+        }
+
+        // 推送到制品库
+        stage('推送到制品库') {
+            steps {
+                echo "******************************************=推送制品仓库"
+                pushDockerImage()
+                //    sh "docker rmi ${docker_repo}"
+            }
+            post {
+                failure {
+                    sendIntegrationResult("false", "推送镜像到制品库失败")
+                    error("推送镜像到制品库失败")
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "******************************************=CI成功"
+            updateGitlabCommitStatus name: 'build', state: 'success'
+            sendIntegrationResult("true", "构建成功")
+        }
+        unstable {
+            echo "******************************************=CI失败"
+            sendIntegrationResult("false", "测试失败")
+        }
+        failure {
+            echo "******************************************=CI失败"
+            updateGitlabCommitStatus name: 'build', state: 'failed'
+        }
+    }
+
+    options {
+        gitLabConnection('gitlab-guide')
+    }
+}
+
+// 代码提交记录
+def getChangeString() {
+    MAX_MSG_LEN = 100
+    def changeString = ""
+
+    echo "Gathering SCM changes"
+    def changeLogSets = currentBuild.changeSets
+    for (int i = 0; i < changeLogSets.size(); i++) {
+        def entries = changeLogSets[i].items
+        for (int j = 0; j < entries.length; j++) {
+            def entry = entries[j]
+            truncated_msg = entry.msg.take(MAX_MSG_LEN)
+            changeString += " - ${truncated_msg} [${entry.author}]\n"
+        }
+    }
+    if (!changeString) {
+        changeString = " - No new changes"
+    }
+    return changeString
+}
+
+// 推送docker镜像到镜像仓库
+def void pushDockerImage() {
+    def repoUrlString = getDockerRepoUrl("${BRANCH_NAME}")
+    def repoUrlArray = repoUrlString.split(",")
+
+    for(String repoUrl : repoUrlArray){
+        def url = repoUrl.trim();
+        def docker_repo = url + "/teddy_repo/${DOCKER_IMAGE_NAME}:${DOCKER_TAG}"
+
+        echo "Docker Image Tag Name: ${DOCKER_TAG}"
+        sh "docker tag ${DOCKER_IMAGE_NAME} ${docker_repo}"
+
+        dockerLogin(url)
+        sh "docker push ${docker_repo}"
+    }
+}
+
+// 定义trim
+def trim(String content) {
+    return content.trim();
+}
+
+// 各分支对于docker镜像仓库地址
+def getDockerRepoUrl(String branch) {
+    if (branch.equals("dev")) {
+        repoUrl = "${docker_repo_url_dev}"
+    } else if (branch.equals("test")) {
+        repoUrl = "${docker_repo_url_test}"
+    } else if(branch.equals("master")) {
+        repoUrl = "${docker_repo_url_prod}"
+    }
+    return repoUrl
+}
+
+// 登录docker镜像仓库
+def dockerLogin(String repoUrl) {
+    if (repoUrl.contains("tencent")) {
+        sh "docker login --username=${docker_builder_tc} --password ${docker_builder_pwd_tc} ${repoUrl}"
+    } else if (repoUrl.contains("ali")) {
+        sh "docker login --username=${docker_builder_ali} --password ${docker_builder_pwd_ali} ${repoUrl}"
+    } else if (repoUrl.contains("jd")) {
+        sh "docker login --username=${docker_builder_jd} --password ${docker_builder_pwd_jd} ${repoUrl}"
+    }
+}
+
+// 应用同步
+def void appSync() {
+    def devops_config = readYaml file: "${PROJECT_MODULE}/devops.yml"
+    if (!devops_config.ci.dingtalk.notify) {
+        return;
+    }
+
+    def requestData = """
+                {
+                    "app_id": "${devops_config.app.app_id}",
+                    "app_name": "${devops_config.app.app_name}",
+                    "git_repo": "${GIT_URL}",
+                    "service": "${devops_config.app.service}",
+                    "owner": "${devops_config.app.owner}",
+                    "members": "${devops_config.app.members}",
+                    "k8s_cluster_deploy": "${devops_config.app.k8s_cluster_deploy}",
+                    "prod_deploy_cluster": "${devops_config.app.prod_deploy_cluster}",
+                    "prod_env_deployer": "${devops_config.app.prod_env_deployer}",
+                    "prod_dingtalk_contacts": "${devops_config.app.prod_dingtalk_contacts}",
+                    "prod_env_test_approver": "${devops_config.app.prod_env_test_approver}",
+                    "prod_env_dev_leader_approver": "${devops_config.app.prod_env_dev_leader_approver}",
+                    "prod_env_dept_leader_approver": "${devops_config.app.prod_env_dept_leader_approver}",
+                    "test_deploy_cluster": "${devops_config.app.test_deploy_cluster}",
+                    "test_env_deployer": "${devops_config.app.test_env_deployer}",
+                    "test_dingtalk_contacts": "${devops_config.app.test_dingtalk_contacts}",
+                    "dev_deploy_cluster": "${devops_config.app.dev_deploy_cluster}",
+                    "dev_env_deployer": "${devops_config.app.dev_env_deployer}",
+                    "dev_dingtalk_contacts": "${devops_config.app.dev_dingtalk_contacts}",
+                    "dingtalk_group": "${devops_config.app.dingtalk_group}",
+                    "group_secret": "${devops_config.app.group_secret}"
+                }
+          """
+
+    println('appCreate requestData: ' + requestData)
+    def response = httpRequest( contentType: 'APPLICATION_JSON_UTF8',
+                                httpMode: "POST",
+                                requestBody: requestData,
+                                url: "${CD_HOST_URL}/app/appcreate/"
+                              )
+
+    println('appCreate Response: ' + response.content)
+}
+
+// 发送构建结果
+def void sendIntegrationResult(String status, String reason) {
+    def devops_config = readYaml file: "${PROJECT_MODULE}/devops.yml"
+    if (!devops_config.ci.dingtalk.notify) {
+        return;
+    }
+
+    def requestData = """
+                {
+                    "app_id": "${devops_config.app.app_id}",
+                    "branch": "${BRANCH_NAME}",
+                    "version": "${DOCKER_TAG}",
+                    "status": "${status}",
+                    "reason": "${reason}",
+                    "build_num": "${BUILD_NUMBER}",
+                    "logs": "${RUN_ARTIFACTS_DISPLAY_URL}"
+                }
+          """
+
+    println('Dingtalk requestData: ' + requestData)
+
+    def response = httpRequest(
+                                contentType: 'APPLICATION_JSON_UTF8',
+                                httpMode: "POST",
+                                requestBody: requestData,
+                                url: "${CD_HOST_URL}/app/integrationcompleted/"
+                              )
+
+    println('Dingtalk Response: ' + response.content)
+}
