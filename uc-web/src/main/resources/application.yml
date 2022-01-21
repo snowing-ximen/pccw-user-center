@@ -1,9 +1,2 @@
 server:
   port: 8081
-
-spring:
-  application:
-    name: pccw-uc
-  profiles:
-    active: dev
-

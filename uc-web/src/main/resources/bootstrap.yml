@@ -1,6 +1,6 @@
 spring:
   application:
-    name: pccw-uc
+    name: xmmpp-uc
   profiles:
     active: dev
   cloud:
