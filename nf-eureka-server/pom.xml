@@ -5,11 +5,11 @@
 
 	<parent>
 		<artifactId>user-center</artifactId>
-		<groupId>net.pccw.uc</groupId>
+		<groupId>net.xmmpp.uc</groupId>
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
 
-	<groupId>net.pccw.uc</groupId>
+	<groupId>net.xmmpp.uc</groupId>
 	<artifactId>nf-eureka-server</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>nf-eureka-server</name>

@@ -9,11 +9,11 @@
 		<version>2.2.10.RELEASE</version>
 	</parent>
 
-    <groupId>net.pccw.uc</groupId>     
+    <groupId>net.xmmpp.uc</groupId>     
     <artifactId>user-center</artifactId>
     <version>0.0.1-SNAPSHOT</version> 
-    <name>PCCW User Center</name>
-    <description>PCCW User Center</description>
+    <name>XMMPP User Center</name>
+    <description>XMMPP User Center</description>
     <modelVersion>4.0.0</modelVersion>
     <packaging>pom</packaging>
 

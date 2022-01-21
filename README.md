@@ -1,4 +1,4 @@
-## PCCW User Center
+## User Center
 
 ##[Mysql db scripts]
 
