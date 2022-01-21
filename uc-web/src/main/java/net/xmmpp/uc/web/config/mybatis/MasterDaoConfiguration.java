@@ -29,7 +29,7 @@ import java.util.List;
 
 @Configuration
 @MapperScan(basePackages = {
-        "net.pccw.uc.dao"
+        "net.xmmpp.uc.dao"
 }, sqlSessionFactoryRef = "mastSqlSessionFactory")
 public class MasterDaoConfiguration {
 

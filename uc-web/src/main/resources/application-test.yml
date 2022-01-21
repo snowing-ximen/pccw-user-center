@@ -47,6 +47,6 @@ eureka:
 
 app:
   mail:
-    subject: welcome to PCCW
+    subject: welcome to XMMPP
     to: snowingximen@163.com
 
